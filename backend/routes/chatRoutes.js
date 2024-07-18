@@ -18,4 +18,4 @@ router.route("/rename").put(protect, renameGroup);
 router.route("/groupremove").put(protect, removeFromGroup);
 router.route("/groupadd").put(protect, addToGroup);
 
-module.exports = router;
+module.exports = router; 
