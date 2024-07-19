@@ -11,81 +11,87 @@ dotenv.config();
 connectDB();
 const app = express();
 
-app.use(express.json()); // to accept json data
+// Middleware to parse JSON bodies
+app.use(express.json());
 
-// app.get("/", (req, res) => {
-//   res.send("API Running!");
-// });
-
+// API Routes
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
 
-// --------------------------deployment------------------------------
-
+// Serve static assets if in production
 const __dirname1 = path.resolve();
 
 if (process.env.NODE_ENV === "production") {
-    app.use(express.static(path.join(__dirname1, "/frontend/build")));
+  app.use(express.static(path.join(__dirname1, "/frontend/build")));
 
-    app.get("*", (req, res) =>
-        res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
-    );
+  app.get("*", (req, res) =>
+    res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
+  );
 } else {
-    app.get("/", (req, res) => {
-        res.send("API is running..");
-    });
+  app.get("/", (req, res) => {
+    res.send("API is running..");
+  });
 }
 
-// --------------------------deployment------------------------------
-
-// Error Handling middlewares
+// Error Handling middleware
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
 const server = app.listen(
-    PORT,
-    console.log(`Server running on PORT ${PORT}...`.yellow.bold)
+  PORT,
+  console.log(`Server running on PORT ${PORT}...`)
 );
 
+// Socket.io Setup
 const io = require("socket.io")(server, {
-    pingTimeout: 60000,
-    cors: {
-        origin: "http://localhost:3000",
-        // credentials: true,
-    },
+  pingTimeout: 60000,
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true // if your frontend and backend are on different domains
+  }
 });
 
 io.on("connection", (socket) => {
-    console.log("Connected to socket.io");
-    socket.on("setup", (userData) => {
-        socket.join(userData._id);
-        socket.emit("connected");
+  console.log("Socket.io connected!");
+
+  socket.on("setup", (userData) => {
+    socket.join(userData._id);
+    socket.emit("connected");
+  });
+
+  socket.on("join chat", (room) => {
+    socket.join(room);
+    console.log(`User joined room: ${room}`);
+  });
+
+  socket.on("typing", (room) => {
+    socket.in(room).emit("typing");
+  });
+
+  socket.on("stop typing", (room) => {
+    socket.in(room).emit("stop typing");
+  });
+
+  socket.on("new message", (newMessageReceived) => {
+    const { chat, sender } = newMessageReceived;
+
+    if (!chat.users) {
+      console.log("chat.users not defined");
+      return;
+    }
+
+    chat.users.forEach((user) => {
+      if (user._id !== sender._id) {
+        io.to(user._id).emit("message received", newMessageReceived);
+      }
     });
+  });
 
-    socket.on("join chat", (room) => {
-        socket.join(room);
-        console.log("User Joined Room: " + room);
-    });
-    socket.on("typing", (room) => socket.in(room).emit("typing"));
-    socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
-
-    socket.on("new message", (newMessageRecieved) => {
-        var chat = newMessageRecieved.chat;
-
-        if (!chat.users) return console.log("chat.users not defined");
-
-        chat.users.forEach((user) => {
-            if (user._id == newMessageRecieved.sender._id) return;
-
-            socket.in(user._id).emit("message recieved", newMessageRecieved);
-        });
-    });
-
-    socket.off("setup", () => {
-        console.log("USER DISCONNECTED");
-        socket.leave(userData._id);
-    });
+  socket.on("disconnect", () => {
+    console.log("User disconnected from socket.io");
+  });
 });
