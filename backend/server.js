@@ -51,6 +51,7 @@ const io = socketio(server, {
   cors: {
     origin: "*",
     methods: "*",
+    credentials: false // if your frontend and backend are on different domains
   }
 });
 
