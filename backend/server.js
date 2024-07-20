@@ -49,8 +49,8 @@ const server = app.listen(PORT, () =>
 const io = socketio(server, {
   pingTimeout: 60000,
   cors: {
-    origin: "https://chat-react-pi.vercel.app",
-    methods: ["GET", "POST"],
+    origin: "*",
+    methods: "*",
     credentials: true // if your frontend and backend are on different domains
   }
 });
