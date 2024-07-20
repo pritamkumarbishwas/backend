@@ -4,13 +4,23 @@ const User = require("../models/userModel");
 const Chat = require("../models/chatModel");
 
 //@description     Get all Messages
-//@route           GET /api/Message/:chatId
+//@route           GET /api/message/:chatId
 //@access          Protected
 const allMessages = asyncHandler(async (req, res) => {
   try {
     const messages = await Message.find({ chat: req.params.chatId })
-      .populate("sender", "name pic email")
-      .populate("chat");
+      .populate({
+        path: "sender",
+        select: "name pic email", // Select specific fields for the sender
+      })
+      .populate({
+        path: "chat",
+        populate: {
+          path: "users",
+          select: "name pic email", // Select specific fields for the chat users
+        },
+      });
+
     res.json(messages);
   } catch (error) {
     res.status(400);
@@ -19,33 +29,41 @@ const allMessages = asyncHandler(async (req, res) => {
 });
 
 //@description     Create New Message
-//@route           POST /api/Message/
+//@route           POST /api/message
 //@access          Protected
 const sendMessage = asyncHandler(async (req, res) => {
   const { content, chatId } = req.body;
 
   if (!content || !chatId) {
-    console.log("Invalid data passed into request");
-    return res.sendStatus(400);
+    return res.status(400).send("Invalid data passed into request");
   }
 
-  var newMessage = {
-    sender: req.user._id,
-    content: content,
-    chat: chatId,
-  };
-
   try {
-    var message = await Message.create(newMessage);
+    const newMessage = {
+      sender: req.user._id,
+      content: content,
+      chat: chatId,
+    };
 
-    message = await message.populate("sender", "name pic").execPopulate();
-    message = await message.populate("chat").execPopulate();
-    message = await User.populate(message, {
-      path: "chat.users",
-      select: "name pic email",
-    });
+    // Create new message
+    let message = await Message.create(newMessage);
 
-    await Chat.findByIdAndUpdate(req.body.chatId, { latestMessage: message });
+    // Populate sender and chat with user details
+    message = await Message.findById(message._id)
+      .populate({
+        path: 'sender',
+        select: 'name pic',
+      })
+      .populate({
+        path: 'chat',
+        populate: {
+          path: 'users',
+          select: 'name pic email',
+        },
+      });
+
+    // Update the latest message in the chat
+    await Chat.findByIdAndUpdate(chatId, { latestMessage: message }, { new: true });
 
     res.json(message);
   } catch (error) {
