@@ -49,9 +49,9 @@ const server = app.listen(PORT, () =>
 const io = socketio(server, {
   pingTimeout: 60000,
   cors: {
-    origin: "*",
-    methods: "*",
-    credentials: false // if your frontend and backend are on different domains
+    origin: "*", // Allow requests from any origin
+    methods: "*", // Allow all methods (GET, POST, PUT, DELETE, etc.)
+    credentials: false // Do not require credentials
   }
 });
 
@@ -59,34 +59,55 @@ io.on("connection", (socket) => {
   console.log("Socket.io connected!");
 
   socket.on("setup", (userData) => {
-    socket.join(userData._id);
-    socket.emit("connected");
+    try {
+      socket.join(userData._id);
+      socket.emit("connected", { message: "Socket connected successfully" });
+    } catch (error) {
+      console.error("Error setting up socket:", error.message);
+      socket.emit("setup error", { error: "Failed to setup socket" });
+    }
   });
 
   socket.on("join chat", (room) => {
-    socket.join(room);
-    console.log(`User joined room: ${room}`);
+    try {
+      socket.join(room);
+      console.log(`User joined room: ${room}`);
+    } catch (error) {
+      console.error("Error joining chat room:", error.message);
+    }
   });
 
   socket.on("typing", (room) => {
-    socket.in(room).emit("typing");
+    try {
+      io.in(room).emit("typing");
+    } catch (error) {
+      console.error("Error emitting typing event:", error.message);
+    }
   });
 
   socket.on("stop typing", (room) => {
-    socket.in(room).emit("stop typing");
+    try {
+      io.in(room).emit("stop typing");
+    } catch (error) {
+      console.error("Error emitting stop typing event:", error.message);
+    }
   });
 
   socket.on("new message", (newMessageReceived) => {
     const { chat, sender } = newMessageReceived;
 
-    if (!chat.users) {
-      console.log("chat.users not defined");
+    if (!chat.users || !chat.users.length) {
+      console.log("Invalid chat object or no users in chat");
       return;
     }
 
     chat.users.forEach((user) => {
       if (user._id !== sender._id) {
-        io.to(user._id).emit("message received", newMessageReceived);
+        try {
+          io.to(user._id).emit("message received", newMessageReceived);
+        } catch (error) {
+          console.error(`Error emitting message to user ${user._id}:`, error.message);
+        }
       }
     });
   });
