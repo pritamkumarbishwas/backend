@@ -18,12 +18,23 @@ const app = express();
 // Middleware
 app.use(express.json()); // Parse JSON bodies
 
-// CORS
-app.use(cors({
-  origin: "https://chat-react-pi.vercel.app",
-  methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+// CORS configuration
+const allowedOrigins = [
+  "https://chat-react-pi.vercel.app",
+  "http://localhost:3000", // Add other origins as needed
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+};
+
+app.use(cors(corsOptions));
 
 // API Routes
 app.use("/api/user", userRoutes);
@@ -56,7 +67,7 @@ const server = http.createServer(app);
 // Socket.io Setup
 const io = socketIo(server, {
   cors: {
-    origin: "https://chat-react-pi.vercel.app",
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization"],
   },
@@ -114,5 +125,5 @@ process.on("SIGINT", () => {
   server.close(() => {
     console.log("Server closed.");
     process.exit(0);
-  }); 
+  });
 });
