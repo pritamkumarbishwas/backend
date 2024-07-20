@@ -9,6 +9,7 @@ const path = require("path");
 const colors = require("colors"); // Optionally, for colorful console logs
 const http = require("http");
 const socketIo = require("socket.io");
+const cors = require("cors");
 
 dotenv.config();
 connectDB();
@@ -16,6 +17,13 @@ const app = express();
 
 // Middleware
 app.use(express.json()); // Parse JSON bodies
+
+// CORS
+app.use(cors({
+  origin: "https://chat-react-pi.vercel.app",
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 // API Routes
 app.use("/api/user", userRoutes);
@@ -27,7 +35,6 @@ const __dirname1 = path.resolve();
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname1, "/frontend/build")));
-
   app.get("*", (req, res) =>
     res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
   );
@@ -49,7 +56,9 @@ const server = http.createServer(app);
 // Socket.io Setup
 const io = socketIo(server, {
   cors: {
-    origin: "*", // Adjust as needed for security
+    origin: "https://chat-react-pi.vercel.app",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
 });
 
