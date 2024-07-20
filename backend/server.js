@@ -6,7 +6,6 @@ const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const path = require("path");
-const socketio = require("socket.io");
 
 dotenv.config();
 connectDB();
@@ -24,7 +23,7 @@ app.use("/api/message", messageRoutes);
 const __dirname1 = path.resolve();
 
 if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname1, "frontend", "build")));
+  app.use(express.static(path.join(__dirname1, "/frontend/build")));
 
   app.get("*", (req, res) =>
     res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
@@ -41,15 +40,16 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () =>
+const server = app.listen(
+  PORT,
   console.log(`Server running on PORT ${PORT}...`)
 );
 
 // Socket.io Setup
-const io = socketio(server, {
+const io = require("socket.io")(server, {
   pingTimeout: 60000,
   cors: {
-    origin: "https://chat-react-pi.vercel.app",
+    origin: "*",
     methods: ["GET", "POST"],
     credentials: true // if your frontend and backend are on different domains
   }
