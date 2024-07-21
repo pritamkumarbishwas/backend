@@ -17,13 +17,8 @@ const app = express();
 app.use(express.json()); // Parse JSON bodies
 
 // CORS configuration - allow all origins and all methods
-// app.use(cors());
+app.use(cors());
 
-app.use(cors({
-  origin: 'https://chat-react-pi.vercel.app',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
 // API Routes
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
