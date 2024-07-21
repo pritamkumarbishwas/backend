@@ -5,8 +5,6 @@ const userRoutes = require("./routes/userRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
-const path = require("path");
-const colors = require("colors"); // Optionally, for colorful console logs
 const http = require("http");
 const socketIo = require("socket.io");
 const cors = require("cors");
@@ -18,43 +16,17 @@ const app = express();
 // Middleware
 app.use(express.json()); // Parse JSON bodies
 
-// CORS configuration
-const allowedOrigins = [
-  "https://chat-react-pi.vercel.app",
-  "http://localhost:3000", // Add other origins as needed
-];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-};
-
-app.use(cors(corsOptions));
+// CORS configuration - allow all origins and all methods
+app.use(cors());
 
 // API Routes
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
 
-// Serve static assets if in production
-const __dirname1 = path.resolve();
-
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname1, "/frontend/build")));
-  app.get("*", (req, res) =>
-    res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
-  );
-} else {
-  app.get("/", (req, res) => {
-    res.send("API is running..");
-  });
-}
-
+app.get("/", (req, res) => {
+  res.send("Welcome to your API!"); 
+});
 // Error Handling middleware
 app.use(notFound);
 app.use(errorHandler);
@@ -67,7 +39,7 @@ const server = http.createServer(app);
 // Socket.io Setup
 const io = socketIo(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: "*",
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization"],
   },
